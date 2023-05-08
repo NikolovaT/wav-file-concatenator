@@ -7,7 +7,15 @@
 #include <libgen.h>
 #include "wav.h"
 
+//----------------------------------
+//DESCRIPTION:
 // Generate a buffer of silence
+//
+//PARAMETERS:
+//
+//RETURN VALUE:
+//----------------------------------
+
 void generate_silence(char *buffer, int sample_rate, int num_channels, int duration) {
     int num_samples = sample_rate * num_channels * duration;
     for (int i = 0; i < num_samples; i++) {
@@ -89,13 +97,42 @@ int length_difference(int first_length, int second_length, char *numSystem) {
     }
 }
 
+char* default_filename( char* first_file,  char* second_file) {
+    // Extract the file names from the paths
+    first_file[strlen(first_file)-4] = '\0';
+    second_file[strlen(second_file)-4] = '\0';
+    char* first_filename = first_file;
+    char* second_filename = strrchr(second_file, '\\');
+
+    // Handle cases where the paths end with a '/'
+
+
+    if (second_filename == NULL) {
+        second_filename = second_file;
+    } else {
+        second_filename++;
+    }
+
+    // Calculate the lengths of the file names
+    size_t first_len = strlen(first_filename);
+    size_t second_len = strlen(second_filename);
+
+    // Allocate memory for the concatenated file name
+    size_t concat_len = first_len + second_len + 20;  // 20 extra characters for "-concatenated.wav"
+    char* concatenated = (char*)malloc((concat_len + 1) * sizeof(char));
+
+    // Concatenate the file names
+    snprintf(concatenated, concat_len + 1, "%s-%s-concatenated.wav", first_filename, second_filename);
+
+    return concatenated;
+}
+
 int main(int argc, char *argv[]) {
     char *input_file1 = NULL;
     char *input_file2 = NULL;
     char *output_file = NULL;
     int silentMode = 0;
     char *numSystem = NULL;
-
 
     int opt;
     while ((opt = getopt(argc, argv, "f:b:r:n:s::")) != -1) {
@@ -116,13 +153,13 @@ int main(int argc, char *argv[]) {
             numSystem = optarg;
             break;
         default:
-            fprintf(stderr, "Usage: %s -f path to input file on the front -b path to input file on the back -r path to the output file -s silent mode (optional) -n num sysytem hex or oct with dec a s default (optional) \n", argv[0]);
+            fprintf(stderr, "Usage: %s -f path to input file on the front -b path to input file on the back -r path to the output file (optional, if no path specified the defaut name is firstFile-secondFile-concatenated) -s silent mode (optional) -n num sysytem hex or oct with dec a s default (optional) \n", argv[0]);
             exit(EXIT_FAILURE);
         }
     }
 
-    if (input_file1 == NULL || input_file2 == NULL || output_file == NULL) {
-        fprintf(stderr, "Usage: %s -f path to input file on the front -b path to input file on the back -r path to the output file -s silent mode (optional) -n num sysytem hex or oct with dec a s default (optional) \n", argv[0]);
+    if (input_file1 == NULL || input_file2 == NULL) {
+        fprintf(stderr, "Usage: %s -f path to input file on the front -b path to input file on the back -r path to the output file (optional, if no path specified the defaut name is firstFile-secondFile-concatenated) -s silent mode (optional) -n num sysytem hex or oct with dec a s default (optional) \n", argv[0]);
         exit(EXIT_FAILURE);
     }
 
@@ -138,6 +175,12 @@ int main(int argc, char *argv[]) {
         perror("\nError opening input file No. 2");
         exit(EXIT_FAILURE);
     }
+
+    if(output_file==NULL){
+        output_file = default_filename(input_file1, input_file2);
+    }
+
+    printf("\n!!!!!11%s", output_file);
 
     FILE *output = fopen(output_file, "wb");
     if (output == NULL) {
@@ -186,6 +229,7 @@ int main(int argc, char *argv[]) {
 
     // Write the header of the output file
     fwrite(&header_out, sizeof(wav_header_t), 1, output);
+
 
     if (silentMode == 0) {
         printf("\nGenerate the header of the output file: DONE");
