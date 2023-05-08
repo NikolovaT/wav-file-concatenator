@@ -7,14 +7,19 @@
 #include <libgen.h>
 #include "wav.h"
 
-//----------------------------------
+//----------------------------------------------------------------------------------------------
 //DESCRIPTION:
-// Generate a buffer of silence
+// Generate a buffer of silence to be inserted between the sound data from the two input files
 //
 //PARAMETERS:
+// char *buffer: gets silence_buffer that points to the buffer
+// int sample_rate: gets header1.SampleRate the sample rate of the first file
+// int num_channels: gets header1.NumChannels the number of channels of the first file
+// int duration: gets the duration of the silence in seconds
 //
 //RETURN VALUE:
-//----------------------------------
+// No return value
+//----------------------------------------------------------------------------------------------
 
 void generate_silence(char *buffer, int sample_rate, int num_channels, int duration) {
     int num_samples = sample_rate * num_channels * duration;
@@ -23,8 +28,21 @@ void generate_silence(char *buffer, int sample_rate, int num_channels, int durat
     }
 }
 
-// Length compare
-int length_difference(int first_length, int second_length, char *numSystem) {
+//----------------------------------------------------------------------------------------------
+//DESCRIPTION:
+// Compares the length difference between the sound data from the two input files
+// and displays it in the chosen numerical system
+//
+//PARAMETERS:
+// int first_length: gets header1.Subchunk2Size the lenght of the sound data of the fist input file
+// int second_length: gets header2.Subchunk2Size the lenght of the sound data of the second input file
+// char *numSystem: gets numSystem that points to the chosen numerical system
+//
+//RETURN VALUE:
+// No return value
+//----------------------------------------------------------------------------------------------
+
+void length_difference(int first_length, int second_length, char *numSystem) {
     int diff = abs(first_length - second_length)/8;
 
     //For dec or Default
@@ -34,8 +52,6 @@ int length_difference(int first_length, int second_length, char *numSystem) {
         } else {
             printf("\nThe sound content of input file No 1 has %d (in dec) bytes more sound data than input file No 2", diff);
         }
-
-        return 0;
     }
     // For hex
     else if(memcmp(numSystem, "hex", 3) == 0) {
@@ -69,8 +85,6 @@ int length_difference(int first_length, int second_length, char *numSystem) {
         } else {
             printf(" (in hex) bytes more sound data than input file No 2");
         }
-
-        return 0;
     }
     // For oct
     else if(memcmp(numSystem, "oct", 3) == 0) {
@@ -92,33 +106,43 @@ int length_difference(int first_length, int second_length, char *numSystem) {
         } else {
             printf("\nThe sound content of input file No 1 has %d (in oct) bytes more sound data than input file No 2", octalnum);
         }
-
-        return 0;
     }
 }
 
-char* default_filename( char* first_file,  char* second_file) {
-    // Extract the file names from the paths
+//----------------------------------------------------------------------------------------------
+//DESCRIPTION:]
+// Makes the default path to the output file the same as the path to the first file
+// Creates default name for the output file that is (input file name 1)-(input file name 2)-
+// concatenated.wav
+//
+//PARAMETERS:
+// char* first_file: gets input_file1 that points to the full path of the first file
+// char* second_file: gets input_file2 that points to the full path of the second file
+//
+//RETURN VALUE:
+// return concatenated: the full path and defaut name for the output file
+//----------------------------------------------------------------------------------------------
+
+
+char* default_filename(char* first_file,  char* second_file) {
+    // Get the fist file without extension and the second file's name
     first_file[strlen(first_file)-4] = '\0';
     second_file[strlen(second_file)-4] = '\0';
     char* first_filename = first_file;
     char* second_filename = strrchr(second_file, '\\');
 
-    // Handle cases where the paths end with a '/'
-
-
+    // If the paths end with a '/' the file is in the directory
     if (second_filename == NULL) {
         second_filename = second_file;
     } else {
         second_filename++;
     }
 
-    // Calculate the lengths of the file names
     size_t first_len = strlen(first_filename);
     size_t second_len = strlen(second_filename);
 
-    // Allocate memory for the concatenated file name
-    size_t concat_len = first_len + second_len + 20;  // 20 extra characters for "-concatenated.wav"
+    // Allocate memory for the concatenated file name with malloc
+    size_t concat_len = first_len + second_len + 20;  // 20 extra characters for (-concatenated.wav)
     char* concatenated = (char*)malloc((concat_len + 1) * sizeof(char));
 
     // Concatenate the file names
@@ -134,6 +158,7 @@ int main(int argc, char *argv[]) {
     int silentMode = 0;
     char *numSystem = NULL;
 
+    // Get input
     int opt;
     while ((opt = getopt(argc, argv, "f:b:r:n:s::")) != -1) {
         switch (opt) {
@@ -158,6 +183,7 @@ int main(int argc, char *argv[]) {
         }
     }
 
+    // Check if input is valid
     if (input_file1 == NULL || input_file2 == NULL) {
         fprintf(stderr, "Usage: %s -f path to input file on the front -b path to input file on the back -r path to the output file (optional, if no path specified the defaut name is firstFile-secondFile-concatenated) -s silent mode (optional) -n num sysytem hex or oct with dec a s default (optional) \n", argv[0]);
         exit(EXIT_FAILURE);
@@ -177,10 +203,8 @@ int main(int argc, char *argv[]) {
     }
 
     if(output_file==NULL){
-        output_file = default_filename(input_file1, input_file2);
+        output_file = default_filename(input_file1, input_file2); //Create the default name for output file
     }
-
-    printf("\n!!!!!11%s", output_file);
 
     FILE *output = fopen(output_file, "wb");
     if (output == NULL) {
@@ -192,6 +216,7 @@ int main(int argc, char *argv[]) {
         printf("\nFiles successfully opened");
     }
 
+    // Use construct from wav.h
     wav_header_t header1, header2, header_out;
 
     // Read the headers of the input files
@@ -214,7 +239,7 @@ int main(int argc, char *argv[]) {
 
     if (silentMode == 0) {
         printf("\nBoth files are valid WAV files with the same audio format.");
-        length_difference(header1.Subchunk2Size, header2.Subchunk2Size, numSystem);           // Display length difference
+        length_difference(header1.Subchunk2Size, header2.Subchunk2Size, numSystem);   // Display length difference
     }
 
 
@@ -235,7 +260,7 @@ int main(int argc, char *argv[]) {
         printf("\nGenerate the header of the output file: DONE");
     }
 
-    // Copy the audio data from the first input file to the output file
+    // Copy the audio data from the fist input file to the output file
     char buffer[4096];
     size_t bytes_read;
     while((bytes_read = fread(buffer, 1, sizeof(buffer), input1)) > 0) {
