@@ -6,108 +6,9 @@
 #include <stdint.h>
 #include <libgen.h>
 #include "wav.h"
-
-//----------------------------------------------------------------------------------------------
-//DESCRIPTION:
-// Generate a buffer of silence to be inserted between the sound data from the two input files
-//
-//PARAMETERS:
-// char *buffer: gets silence_buffer that points to the buffer
-// int sample_rate: gets header1.SampleRate the sample rate of the first file
-// int num_channels: gets header1.NumChannels the number of channels of the first file
-// int duration: gets the duration of the silence in seconds
-//
-//RETURN VALUE:
-// No return value
-//----------------------------------------------------------------------------------------------
-
-void generate_silence(char *buffer, int sample_rate, int num_channels, int duration) {
-    int num_samples = sample_rate * num_channels * duration;
-    for (int i = 0; i < num_samples; i++) {
-        buffer[i] = 0;
-    }
-}
-
-//----------------------------------------------------------------------------------------------
-//DESCRIPTION:
-// Compares the length difference between the sound data from the two input files
-// and displays it in the chosen numerical system
-//
-//PARAMETERS:
-// int first_length: gets header1.Subchunk2Size the lenght of the sound data of the fist input file
-// int second_length: gets header2.Subchunk2Size the lenght of the sound data of the second input file
-// char *numSystem: gets numSystem that points to the chosen numerical system
-//
-//RETURN VALUE:
-// No return value
-//----------------------------------------------------------------------------------------------
-
-void length_difference(int first_length, int second_length, char *numSystem) {
-    int diff = abs(first_length - second_length)/8;
-
-    //For dec or Default
-    if (!numSystem || memcmp(numSystem, "dec", 3) == 0 || memcmp(numSystem, "hex", 3) != 0 && memcmp(numSystem, "oct", 3) != 0) {
-        if (first_length < second_length) {
-            printf("\nThe sound content of input file No 2 has %d (in dec) bytes more sound data than input file No 1", diff);
-        } else {
-            printf("\nThe sound content of input file No 1 has %d (in dec) bytes more sound data than input file No 2", diff);
-        }
-    }
-    // For hex
-    else if(memcmp(numSystem, "hex", 3) == 0) {
-        long quotient, remainder;
-        int i, j = 0;
-        char hexadecimalnum[100];
-        quotient = diff;
-
-        if (first_length < second_length) {
-            printf("\nThe sound content of input file No 2 has ");
-        } else {
-            printf("\nThe sound content of input file No 1 has ");
-        }
-
-        while (quotient != 0) {
-            remainder = quotient % 16;
-            if (remainder < 10) {
-                hexadecimalnum[j++] = 48 + remainder;
-            } else {
-                hexadecimalnum[j++] = 55 + remainder;
-            }
-            quotient = quotient / 16;
-        }
-
-        for (i = j-1; i >= 0; i--) {
-            printf("%c", hexadecimalnum[i]);
-        }
-
-        if (first_length < second_length) {
-            printf(" (in hex) bytes more sound data than input file No 1");
-        } else {
-            printf(" (in hex) bytes more sound data than input file No 2");
-        }
-    }
-    // For oct
-    else if(memcmp(numSystem, "oct", 3) == 0) {
-        long remainder, quotient,octalnum=0;
-        int octalNumber[100], i = 1, j;
-        quotient = diff;
-
-        while (quotient != 0) {
-            octalNumber[i++] = quotient % 8;
-            quotient = quotient / 8;
-        }
-
-        for (j = i - 1; j > 0; j--) {
-            octalnum = octalnum*10 + octalNumber[j];
-        }
-
-        if (first_length < second_length) {
-            printf("\nThe sound content of input file No 2 has %d (in oct) bytes more sound data than input file No 1", octalnum);
-        } else {
-            printf("\nThe sound content of input file No 1 has %d (in oct) bytes more sound data than input file No 2", octalnum);
-        }
-    }
-}
+#include "generate_silence.c"
+#include "length_difference.c"
+#include "print_messages.c"
 
 //----------------------------------------------------------------------------------------------
 //DESCRIPTION:]
@@ -122,7 +23,6 @@ void length_difference(int first_length, int second_length, char *numSystem) {
 //RETURN VALUE:
 // return concatenated: the full path and defaut name for the output file
 //----------------------------------------------------------------------------------------------
-
 
 char* default_filename(char* first_file,  char* second_file) {
     // Get the fist file without extension and the second file's name
@@ -212,9 +112,7 @@ int main(int argc, char *argv[]) {
         exit(EXIT_FAILURE);
     }
 
-    if (silentMode == 0) {
-        printf("\nFiles successfully opened");
-    }
+    print_messages(silentMode, 1);
 
     // Use construct from wav.h
     wav_header_t header1, header2, header_out;
@@ -237,9 +135,9 @@ int main(int argc, char *argv[]) {
         exit(EXIT_FAILURE);
     }
 
-    if (silentMode == 0) {
-        printf("\nBoth files are valid WAV files with the same audio format.");
-        length_difference(header1.Subchunk2Size, header2.Subchunk2Size, numSystem);   // Display length difference
+    print_messages(silentMode, 2);
+    if(silentMode==0){
+       length_difference(header1.Subchunk2Size, header2.Subchunk2Size, numSystem);   // Display length difference
     }
 
 
@@ -255,10 +153,7 @@ int main(int argc, char *argv[]) {
     // Write the header of the output file
     fwrite(&header_out, sizeof(wav_header_t), 1, output);
 
-
-    if (silentMode == 0) {
-        printf("\nGenerate the header of the output file: DONE");
-    }
+    print_messages(silentMode, 3);
 
     // Copy the audio data from the fist input file to the output file
     char buffer[4096];
@@ -267,9 +162,7 @@ int main(int argc, char *argv[]) {
         fwrite(buffer, 1, bytes_read, output);
     }
 
-    if (silentMode == 0) {
-        printf("\nTransfer audio data from the first input file: DONE");
-    }
+    print_messages(silentMode, 4);
 
     // Generate a buffer of five seconds of silence
     int buffer_size = header1.SampleRate * header1.NumChannels * (header1.BitsPerSample / 8);
@@ -279,18 +172,14 @@ int main(int argc, char *argv[]) {
     // Write the buffer of silence to the output file
     fwrite(silence_buffer, 1, buffer_size * 5, output);
 
-    if (silentMode == 0) {
-        printf("\nAdd five second of silence after the audio data from the first file: DONE");
-    }
+    print_messages(silentMode, 5);
 
     // Copy the audio data from the second input file to the output file
     while ((bytes_read = fread(buffer, 1, sizeof(buffer), input2)) > 0) {
         fwrite(buffer, 1, bytes_read, output);
     }
 
-    if (silentMode == 0) {
-        printf("\nTransfer audio data from the second input file: DONE");
-    }
+    print_messages(silentMode, 6);
 
     // Close the files
     fclose(input1);
