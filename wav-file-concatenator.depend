@@ -1,5 +1,5 @@
 # depslib dependency file v1.0
-1683558990 source:c:\users\user\projects\wav-file-concatenator\main.c
+1686073849 source:c:\users\user\projects\wav-file-concatenator\main.c
 	<stdio.h>
 	<stdlib.h>
 	<string.h>
